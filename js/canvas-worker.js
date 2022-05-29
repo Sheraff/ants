@@ -19,7 +19,7 @@ let context, side
 	let port, started
 	onmessage = async function({data}) {
 		if (data.canvas) {
-			context = data.canvas.getContext("2d")
+			context = data.canvas.getContext("2d", { alpha: false })
 		}
 		if (data.side) {
 			side = data.side

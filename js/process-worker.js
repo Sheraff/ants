@@ -51,7 +51,7 @@ let port
  * @param {number} side 
  */
 function start(side) {
-	const ants = new Ants(1500, side)
+	const ants = new Ants(4000, side)
 	entities.ants = ants
 	if (!paused) {
 		play()
@@ -71,11 +71,22 @@ function loop() {
 
 			Object.values(entities).forEach((entity) => entity.update(dt))
 
+			// for (const entity of Object.values(entities)) {
+			// 	const chunks = entity.update(dt)
+			// 	let chunk
+			// 	do {
+			// 		if (performance.now() - time > 1000 / 60) {
+			// 			await new Promise(resolve => setTimeout(resolve, 0))
+			// 		}
+			// 		chunk = chunks.next()
+			// 	} while(!chunk.done)
+			// }
+
 			fpsArray.push(dt)
 			if(fpsArray.length > 100) {
 				fpsArray.shift()
 			}
-		}, 16.6)
+		}, 0)
 	}
 	frame()
 }

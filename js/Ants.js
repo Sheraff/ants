@@ -1,7 +1,7 @@
 const LINEAR_SPEED = 70;
 const ANGULAR_SPEED = Math.PI / 2;
 const ANGULAR_ACCELERATION = Math.PI / 4
-const SIZE = 4
+const SIZE = 2
 const RAY_CAST_COUNT = 6
 
 function randomInt(min, max) {
@@ -101,39 +101,42 @@ export default class Ants {
 		context.fillStyle = "limegreen"
 		context.strokeStyle = "limegreen"
 		for (let i = 0; i < this.count; i++) {
+			const x = Math.round(this.x[i])
+			const y = Math.round(this.y[i])
+			const angle = this.angle[i]
+			const closest = this.closest[i]
 			// rays
-			if(this.closest[i]) {
+			if(closest) {
 				for (let rayIndex = 0; rayIndex <= RAY_CAST_COUNT; rayIndex++) {
 					const odd = rayIndex & 1
 					const evenCeil = (rayIndex + 1) & ~1
 					const multiplier = evenCeil / 2 * (odd * 2 - 1)
-					const angle = this.angle[i] + multiplier * Math.PI / (RAY_CAST_COUNT + 1)
-					const rayX = this.x[i] + Math.cos(angle) * LINEAR_SPEED * 2
-					const rayY = this.y[i] + Math.sin(angle) * LINEAR_SPEED * 2
+					const rayAngle = angle + multiplier * RAY_ANGLE_INTERVAL
+					const rayX = x + Math.cos(rayAngle) * LINEAR_SPEED * 2
+					const rayY = y + Math.sin(rayAngle) * LINEAR_SPEED * 2
 					context.strokeStyle = rayIndex === 0 
 						? "purple"
 						: odd ? "orange" : "blue"
 					context.beginPath()
-					context.moveTo(this.x[i], this.y[i])
+					context.moveTo(x, y)
 					context.lineTo(rayX, rayY)
 					context.stroke()
 				}
 			}
 
 			// body
-			context.strokeStyle = this.closest[i] ? "red" : "limegreen"
+			context.fillStyle = closest ? "red" : "white"
 			context.beginPath()
-			// context.arc(this.x[i], this.y[i], SIZE, 0, Math.PI * 2)
-			context.rect(this.x[i] - SIZE / 2, this.y[i] - SIZE / 2, SIZE, SIZE)
-			context.stroke()
+			context.rect(Math.floor(x - SIZE / 2), Math.floor(y - SIZE / 2), SIZE, SIZE)
+			context.fill()
 
 			// front
-			if(this.closest[i]) {
-				const rayX = this.x[i] + Math.cos(this.angle[i]) * LINEAR_SPEED / 2
-				const rayY = this.y[i] + Math.sin(this.angle[i]) * LINEAR_SPEED / 2
+			if(closest) {
+				const rayX = x + Math.cos(angle) * LINEAR_SPEED / 2
+				const rayY = y + Math.sin(angle) * LINEAR_SPEED / 2
 				context.strokeStyle = "red"
 				context.beginPath()
-				context.moveTo(this.x[i], this.y[i])
+				context.moveTo(x, y)
 				context.lineTo(rayX, rayY)
 				context.stroke()
 			}
