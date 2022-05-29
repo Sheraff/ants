@@ -41,7 +41,6 @@ export default class Ants {
 		const closest = makeUint8SharedArrayBuffer(new Array(count).fill().map(() => 0))
 		this.buffers.closest = closest[0]
 		this.closest = closest[1]
-		this.closest[0] = 1
 		this.chunks = []
 	}
 
@@ -65,7 +64,7 @@ export default class Ants {
 				if(angle !== null) {
 					this.angularSpeed[i] = angle * dt
 				} else if(Math.abs(this.angularSpeed[i]) < 0.01) {
-					this.angularSpeed[i] = Math.random() * ANGULAR_ACCELERATION * 2 - ANGULAR_ACCELERATION
+					this.angularSpeed[i] = randomFloat(-ANGULAR_ACCELERATION / 2, ANGULAR_ACCELERATION / 2)
 				} else if (this.angularSpeed[i]) {
 					this.angularSpeed[i] -= dt * ANGULAR_ACCELERATION * Math.sign(this.angularSpeed[i])
 				}

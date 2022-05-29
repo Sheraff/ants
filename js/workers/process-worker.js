@@ -55,10 +55,10 @@ let port
  * @param {number} side 
  */
 function start(side) {
-	const count = 300
-	entities.home = new Landmark(0, side/10, side/10)
-	entities.food = new Landmark(1, side - side/10, side - side/10)
-	entities.pheromones = new Pheromones(count * ((PHEROMONE_DURATION + 1) / PHEROMONE_PERIOD), side)
+	const count = 400
+	entities.home = new Landmark(0, side/4, side/4)
+	entities.food = new Landmark(1, 3*side/4, 3*side/4)
+	entities.pheromones = new Pheromones(Math.ceil(count * ((PHEROMONE_DURATION + 1) / PHEROMONE_PERIOD)), side)
 	entities.ants = new Ants(count, side, entities.home)
 	if (!paused) {
 		play()
