@@ -8,15 +8,7 @@ html, body {
 	}
 }
 
-body {
-	display: flex;
-	flex-direction: column;
-	height: 100vh;
-}
-
 canvas {
-	flex: 1;
-	aspect-ratio: 1;
-	height: 1;
-	object-fit: contain;
+	width: 100vmin;
+	height: 100vmin;
 }

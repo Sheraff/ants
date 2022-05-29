@@ -1,25 +1,51 @@
 const LINEAR_SPEED = 70;
 const ANGULAR_SPEED = Math.PI / 2;
 const ANGULAR_ACCELERATION = Math.PI / 4
-const SIZE = 10
-const RAY_CAST_COUNT = 8
+const SIZE = 4
+const RAY_CAST_COUNT = 6
 
 function randomInt(min, max) {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+function makeTypedSharedArrayBuffer(Type, ratio, array){
+	const length = ratio * array.length;
+	const buffer = new SharedArrayBuffer(length);
+	const view = new Type(buffer);
+	for (let i = 0; i < array.length; i++) {
+		view[i] = array[i];
+	}
+	return [buffer, view];
+}
+
+const makeFloat32SharedArrayBuffer = makeTypedSharedArrayBuffer.bind(null, Float32Array, 4)
+const makeUint8SharedArrayBuffer = makeTypedSharedArrayBuffer.bind(null, Uint8Array, 1)
 
 export default class Ants {
 	/**
 	 * @param {number} count
 	 * @param {number} side
 	 */
-	constructor(count, side) {
+	constructor(count = 0, side = 0) {
 		this.count = count
 		this.side = side
-		this.x = new Float32Array(new Array(count).fill().map(() => randomInt(0, side)))
-		this.y = new Float32Array(new Array(count).fill().map(() => randomInt(0, side)))
-		this.angle = new Float32Array(new Array(count).fill().map(() => Math.random() * Math.PI * 2))
-		this.angularSpeed = new Float32Array(new Array(count).fill().map(() => 0))
+		this.buffers = {}
+		const x = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => randomInt(0, side)))
+		this.buffers.x = x[0]
+		this.x = x[1]
+		const y = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => randomInt(0, side)))
+		this.buffers.y = y[0]
+		this.y = y[1]
+		const angle = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => Math.random() * Math.PI * 2))
+		this.buffers.angle = angle[0]
+		this.angle = angle[1]
+		const angularSpeed = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => 0))
+		this.buffers.angularSpeed = angularSpeed[0]
+		this.angularSpeed = angularSpeed[1]
+		const closest = makeUint8SharedArrayBuffer(new Array(count).fill().map(() => 0))
+		this.buffers.closest = closest[0]
+		this.closest = closest[1]
+		this.closest[0] = 1
 	}
 
 	/** @param {number} dt */
@@ -53,39 +79,83 @@ export default class Ants {
 		}
 	}
 
+	tagClosest(x, y) {
+		let closestIndex = 0
+		let closestDistance = Infinity
+		for (let i = 0; i < this.count; i++) {
+			const distance = Math.hypot(this.x[i] - x, this.y[i] - y)
+			if (distance < closestDistance) {
+				closestDistance = distance
+				closestIndex = i
+			}
+		}
+		for (let i = 0; i < this.count; i++) {
+			this.closest[i] = 0
+		}
+		this.closest[closestIndex] = 1
+		return closestIndex
+	}
+
 	/** @param {CanvasRenderingContext2D} context */
 	draw(context) {
 		context.fillStyle = "limegreen"
+		context.strokeStyle = "limegreen"
 		for (let i = 0; i < this.count; i++) {
 			// rays
-			// for (let rayIndex = 1; rayIndex <= RAY_CAST_COUNT; rayIndex++) {
-			// 	const odd = rayIndex & 1
-			// 	const evenCeil = (rayIndex + 1) & ~1
-			// 	const multiplier = evenCeil / 2 * (odd * 2 - 1)
-			// 	const angle = this.angle[i] + multiplier * Math.PI / (RAY_CAST_COUNT + 1)
-			// 	const rayX = this.x[i] + Math.cos(angle) * LINEAR_SPEED * 2
-			// 	const rayY = this.y[i] + Math.sin(angle) * LINEAR_SPEED * 2
-			// 	context.strokeStyle = odd ? "pink" : "white"
-			// 	context.beginPath()
-			// 	context.moveTo(this.x[i], this.y[i])
-			// 	context.lineTo(rayX, rayY)
-			// 	context.stroke()
-			// }
+			if(this.closest[i]) {
+				for (let rayIndex = 0; rayIndex <= RAY_CAST_COUNT; rayIndex++) {
+					const odd = rayIndex & 1
+					const evenCeil = (rayIndex + 1) & ~1
+					const multiplier = evenCeil / 2 * (odd * 2 - 1)
+					const angle = this.angle[i] + multiplier * Math.PI / (RAY_CAST_COUNT + 1)
+					const rayX = this.x[i] + Math.cos(angle) * LINEAR_SPEED * 2
+					const rayY = this.y[i] + Math.sin(angle) * LINEAR_SPEED * 2
+					context.strokeStyle = rayIndex === 0 
+						? "purple"
+						: odd ? "orange" : "blue"
+					context.beginPath()
+					context.moveTo(this.x[i], this.y[i])
+					context.lineTo(rayX, rayY)
+					context.stroke()
+				}
+			}
 
 			// body
+			context.strokeStyle = this.closest[i] ? "red" : "limegreen"
 			context.beginPath()
 			context.arc(this.x[i], this.y[i], SIZE, 0, Math.PI * 2)
-			context.fill()
+			context.stroke()
 
 			// front
-			// const rayX = this.x[i] + Math.cos(this.angle[i]) * LINEAR_SPEED / 2
-			// const rayY = this.y[i] + Math.sin(this.angle[i]) * LINEAR_SPEED / 2
-			// context.strokeStyle = "red"
-			// context.beginPath()
-			// context.moveTo(this.x[i], this.y[i])
-			// context.lineTo(rayX, rayY)
-			// context.stroke()
+			if(this.closest[i]) {
+				const rayX = this.x[i] + Math.cos(this.angle[i]) * LINEAR_SPEED / 2
+				const rayY = this.y[i] + Math.sin(this.angle[i]) * LINEAR_SPEED / 2
+				context.strokeStyle = "red"
+				context.beginPath()
+				context.moveTo(this.x[i], this.y[i])
+				context.lineTo(rayX, rayY)
+				context.stroke()
+			}
 		}
+	}
+
+	toData() {
+		return {
+			buffers: this.buffers,
+			count: this.count,
+			side: this.side,
+		}
+	}
+
+	fromData(data) {
+		this.buffers = data.buffers
+		this.x = new Float32Array(data.buffers.x)
+		this.y = new Float32Array(data.buffers.y)
+		this.angle = new Float32Array(data.buffers.angle)
+		this.angularSpeed = new Float32Array(data.buffers.angularSpeed)
+		this.closest = new Uint8Array(data.buffers.closest)
+		this.count = data.count
+		this.side = data.side
 	}
 }
 
