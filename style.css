@@ -1,0 +1,22 @@
+html, body {
+	margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+	body {
+		background: black;
+	}
+}
+
+body {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+
+canvas {
+	flex: 1;
+	aspect-ratio: 1;
+	height: 1;
+	object-fit: contain;
+}
