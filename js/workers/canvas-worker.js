@@ -1,4 +1,5 @@
 import Ants from '../classes/Ants.js'
+import Landmark from '../classes/Landmark.js'
 import Pheromones from '../classes/Pheromones.js'
 
 /**
@@ -51,6 +52,8 @@ function listen(port) {
 }
 
 function start() {
+	entities.home = new Landmark(0)
+	entities.food = new Landmark(1)
 	entities.pheromones = new Pheromones()
 	entities.ants = new Ants()
 	loop()

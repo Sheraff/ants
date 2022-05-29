@@ -1,3 +1,4 @@
+import { HOME_RADIUS, PHEROMONE_PERIOD } from "../utils/constants.js";
 import { randomFloat, randomInt } from "../utils/random.js";
 import {
 	makeFloat32SharedArrayBuffer,
@@ -15,14 +16,14 @@ export default class Ants {
 	 * @param {number} count
 	 * @param {number} side
 	 */
-	constructor(count = 0, side = 0) {
+	constructor(count = 0, side = 0, home = { x: 0, y: 0 }) {
 		this.count = count
 		this.side = side
 		this.buffers = {}
-		const x = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => randomInt(0, side)))
+		const x = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => randomFloat(home.x - HOME_RADIUS / 2, home.x + HOME_RADIUS / 2)))
 		this.buffers.x = x[0]
 		this.x = x[1]
-		const y = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => randomInt(0, side)))
+		const y = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => randomFloat(home.y - HOME_RADIUS / 2, home.y + HOME_RADIUS / 2)))
 		this.buffers.y = y[0]
 		this.y = y[1]
 		const angle = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => randomFloat(0, Math.PI * 2)))
@@ -73,11 +74,18 @@ export default class Ants {
 			this.angle[i] %= Math.PI * 2
 		}
 		for (let i = 0; i < this.count; i++) {
+			if (entities.home.isInside(this.x[i], this.y[i])) {
+				this.hasFood[i] = 0
+			} else if (entities.food.isInside(this.x[i], this.y[i])) {
+				this.hasFood[i] = 1
+			}
+		}
+		for (let i = 0; i < this.count; i++) {
 			const lastPheromone = this.lastPheromone[i]
 			this.lastPheromone[i] = lastPheromone + dt
-			if (lastPheromone > 1 + Math.random() * 0.5) {
+			if (lastPheromone > PHEROMONE_PERIOD + Math.random() * PHEROMONE_PERIOD * 0.5) {
 				this.lastPheromone[i] = 0
-				entities.pheromones.add(this.x[i], this.y[i])
+				entities.pheromones.add(this.x[i], this.y[i], this.hasFood[i])
 			}
 		}
 	}

@@ -1,9 +1,18 @@
+import { PHEROMONE_DURATION } from "../utils/constants.js"
 import {
 	makeInt16SharedArrayBuffer,
 	makeFloat32SharedArrayBuffer,
+	makeUint8SharedArrayBuffer,
 } from "../utils/sharedArrayBuffer.js"
 
-const DURATION = 5
+const types = {
+	0: {
+		color: (shade) => `rgb(0, ${shade}, ${shade})`
+	},
+	1: {
+		color: (shade) => `rgb(${shade}, 0, ${shade})`
+	}
+}
 
 export default class Pheromones {
 	constructor(count = 0) {
@@ -19,14 +28,18 @@ export default class Pheromones {
 		const lifetime = makeFloat32SharedArrayBuffer(new Array(count).fill())
 		this.buffers.lifetime = lifetime[0]
 		this.lifetime = lifetime[1]
+		const type = makeUint8SharedArrayBuffer(new Array(count).fill())
+		this.buffers.type = type[0]
+		this.type = type[1]
 	}
 
-	add(x, y) {
+	add(x, y, type = 0) {
 		if (this.pool.length) {
 			const i = this.pool.pop()
 			this.x[i] = Math.round(x)
 			this.y[i] = Math.round(y)
-			this.lifetime[i] = DURATION
+			this.lifetime[i] = PHEROMONE_DURATION
+			this.type[i] = type
 		} else {
 			console.log('no more pheromones')
 		}
@@ -39,8 +52,6 @@ export default class Pheromones {
 				this.lifetime[i] -= dt
 			}
 			if (this.lifetime[i] <= 0 && before > 0) {
-				this.x[i] = undefined
-				this.y[i] = undefined
 				this.lifetime[i] = undefined
 				this.pool.push(i)
 			}
@@ -48,11 +59,11 @@ export default class Pheromones {
 	}
 
 	draw(context) {
-		const multiplier = 255 / DURATION
+		const multiplier = 255 / PHEROMONE_DURATION
 		for (let i = 0; i < this.count; i++) {
 			if(this.lifetime[i]) {
 				const shade = Math.round(this.lifetime[i] * multiplier)
-				context.fillStyle = `rgb(${shade}, 0, ${shade})`
+				context.fillStyle = types[this.type[i]].color(shade)
 				context.beginPath()
 				context.rect(this.x[i], this.y[i], 1, 1)
 				context.fill()
@@ -73,6 +84,7 @@ export default class Pheromones {
 		this.x = new Int16Array(data.buffers.x)
 		this.y = new Int16Array(data.buffers.y)
 		this.lifetime = new Float32Array(data.buffers.lifetime)
+		this.type = new Uint8Array(data.buffers.type)
 		this.count = data.count
 		this.nextIndex = data.nextIndex
 	}

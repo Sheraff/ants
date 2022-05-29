@@ -1,5 +1,7 @@
 import Ants from '../classes/Ants.js'
+import Landmark from '../classes/Landmark.js'
 import Pheromones from '../classes/Pheromones.js'
+import { PHEROMONE_DURATION, PHEROMONE_PERIOD } from '../utils/constants.js'
 
 /**
  * @typedef {Object} EntitySet
@@ -53,8 +55,10 @@ let port
  */
 function start(side) {
 	const count = 500
-	entities.pheromones = new Pheromones(count * 5)
-	entities.ants = new Ants(count, side)
+	entities.home = new Landmark(0, side/10, side/10)
+	entities.food = new Landmark(1, side - side/10, side - side/10)
+	entities.pheromones = new Pheromones(count * (PHEROMONE_DURATION + PHEROMONE_PERIOD))
+	entities.ants = new Ants(count, side, entities.home)
 	if (!paused) {
 		play()
 	}
