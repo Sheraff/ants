@@ -5,8 +5,8 @@ const port = 5000
 
 app.get('*', (req, res, next) => {
 	res.setHeader('Cross-origin-Embedder-Policy', 'require-corp');
-  res.setHeader('Cross-origin-Opener-Policy','same-origin');
-  next()
+	res.setHeader('Cross-origin-Opener-Policy','same-origin');
+	next()
 })
 
 app.get('/', (req, res) => {

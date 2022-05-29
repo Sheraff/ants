@@ -123,7 +123,8 @@ export default class Ants {
 			// body
 			context.strokeStyle = this.closest[i] ? "red" : "limegreen"
 			context.beginPath()
-			context.arc(this.x[i], this.y[i], SIZE, 0, Math.PI * 2)
+			// context.arc(this.x[i], this.y[i], SIZE, 0, Math.PI * 2)
+			context.rect(this.x[i] - SIZE / 2, this.y[i] - SIZE / 2, SIZE, SIZE)
 			context.stroke()
 
 			// front
