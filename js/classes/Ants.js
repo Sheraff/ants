@@ -6,8 +6,8 @@ import {
 } from "../utils/sharedArrayBuffer.js"
 
 const LINEAR_SPEED = 70;
-const ANGULAR_SPEED = Math.PI / 2;
-const ANGULAR_ACCELERATION = Math.PI / 4
+const ANGULAR_SPEED = Math.PI;
+const ANGULAR_ACCELERATION = Math.PI
 const SIZE = 2
 const RAY_CAST_COUNT = 6
 
@@ -42,6 +42,7 @@ export default class Ants {
 		this.buffers.closest = closest[0]
 		this.closest = closest[1]
 		this.closest[0] = 1
+		this.chunks = []
 	}
 
 	/** @param {number} dt */
@@ -59,24 +60,27 @@ export default class Ants {
 		for (let i = 0; i < this.count; i++) {
 			const angleStrength = rayCast(this.x[i], this.y[i], this.angle[i], this.side)
 			this.angularSpeed[i] += dt * ANGULAR_ACCELERATION * angleStrength
-			if (angleStrength === 0 && this.angularSpeed[i]) {
-				this.angularSpeed[i] -= dt * ANGULAR_ACCELERATION * Math.sign(this.angularSpeed[i])
+			if (angleStrength === 0) {
+				const angle = entities.pheromones.perceive(this.x[i], this.y[i], this.hasFood[i] ? 0 : 1)
+				if(angle !== null) {
+					this.angularSpeed[i] = angle * dt
+				} else if(Math.abs(this.angularSpeed[i]) < 0.01) {
+					this.angularSpeed[i] = Math.random() * ANGULAR_ACCELERATION * 2 - ANGULAR_ACCELERATION
+				} else if (this.angularSpeed[i]) {
+					this.angularSpeed[i] -= dt * ANGULAR_ACCELERATION * Math.sign(this.angularSpeed[i])
+				}
 			}
-			const absAngularSpeed = Math.abs(this.angularSpeed[i])
-			if (angleStrength === 0 && absAngularSpeed < 0.01) {
-				this.angularSpeed[i] = Math.random() * ANGULAR_ACCELERATION * 2 - ANGULAR_ACCELERATION
-			} else {
-				this.angularSpeed[i] = Math.sign(this.angularSpeed[i]) * Math.min(absAngularSpeed, ANGULAR_SPEED)
-			}
+			this.angularSpeed[i] = Math.sign(this.angularSpeed[i]) * Math.min(Math.abs(this.angularSpeed[i]), ANGULAR_SPEED)
 		}
 		for (let i = 0; i < this.count; i++) {
 			this.angle[i] += this.angularSpeed[i] * dt
 			this.angle[i] %= Math.PI * 2
 		}
 		for (let i = 0; i < this.count; i++) {
-			if (entities.home.isInside(this.x[i], this.y[i])) {
+			if (this.hasFood[i] && entities.home.isInside(this.x[i], this.y[i])) {
 				this.hasFood[i] = 0
-			} else if (entities.food.isInside(this.x[i], this.y[i])) {
+				entities.home.collected[0]++
+			} else if (!this.hasFood[i] && entities.food.isInside(this.x[i], this.y[i])) {
 				this.hasFood[i] = 1
 			}
 		}
@@ -85,7 +89,20 @@ export default class Ants {
 			this.lastPheromone[i] = lastPheromone + dt
 			if (lastPheromone > PHEROMONE_PERIOD + Math.random() * PHEROMONE_PERIOD * 0.5) {
 				this.lastPheromone[i] = 0
-				entities.pheromones.add(this.x[i], this.y[i], this.hasFood[i])
+				entities.pheromones.add(this.x[i], this.y[i], this.hasFood[i], this.angle[i])
+			}
+		}
+		this.chunks = []
+		for (let i = 0; i < this.count; i++) {
+			const type = this.hasFood[i] ? 0 : 1
+			if(!this.chunks[type]){
+				this.chunks[type] = []
+			}
+			if(!this.chunks[type][this.x[i]]) {
+				this.chunks[type][this.x[i]] = []
+			}
+			if(!this.chunks[type][this.x[i]][this.y[i]]) {
+				this.chunks[type][this.x[i]][this.y[i]] = true
 			}
 		}
 	}

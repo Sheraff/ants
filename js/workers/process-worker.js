@@ -36,6 +36,7 @@ let port
 		if (data.type === 'mouse') {
 			const {x, y} = data.mouse
 			entities.ants.tagClosest(x, y)
+			entities.pheromones.log()
 		}
 		if (data.type === 'toggle') {
 			paused = !data.status
@@ -54,10 +55,10 @@ let port
  * @param {number} side 
  */
 function start(side) {
-	const count = 500
+	const count = 300
 	entities.home = new Landmark(0, side/10, side/10)
 	entities.food = new Landmark(1, side - side/10, side - side/10)
-	entities.pheromones = new Pheromones(count * (PHEROMONE_DURATION + PHEROMONE_PERIOD))
+	entities.pheromones = new Pheromones(count * ((PHEROMONE_DURATION + 1) / PHEROMONE_PERIOD), side)
 	entities.ants = new Ants(count, side, entities.home)
 	if (!paused) {
 		play()

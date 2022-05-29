@@ -87,8 +87,8 @@ function loop() {
 				}
 			}
 			context.fillStyle = 'white'
-			context.font = '50px monospace'
-			context.fillText(`process: ${processFps} fps - draw: ${drawFps}`, 10, 50)
+			context.font = '25px monospace'
+			context.fillText(`proc.: ${processFps} fps - draw: ${drawFps} - food: ${entities.home.collected[0]}`, 10, 50)
 
 			// next
 			frame()

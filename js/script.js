@@ -1,7 +1,7 @@
 const canvas = document.querySelector("canvas");
 const side = Math.min(window.innerHeight, window.innerWidth);
-canvas.height = side * window.devicePixelRatio;
-canvas.width = side * window.devicePixelRatio;
+canvas.height = side// * window.devicePixelRatio;
+canvas.width = side// * window.devicePixelRatio;
 
 const canvasWorker = new Worker("js/workers/canvas-worker.js", { type: "module" });
 const offscreen = canvas.transferControlToOffscreen();
