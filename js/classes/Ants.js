@@ -1,4 +1,4 @@
-import { HOME_RADIUS, PHEROMONE_PERIOD } from "../utils/constants.js";
+import { CHUNK_SIZE, HOME_RADIUS, PHEROMONE_PERIOD } from "../utils/constants.js";
 import { randomFloat, randomInt } from "../utils/random.js";
 import {
 	makeFloat32SharedArrayBuffer,
@@ -62,8 +62,13 @@ export default class Ants {
 			if (angleStrength === 0) {
 				const angle = entities.pheromones.perceive(this.x[i], this.y[i], this.hasFood[i] ? 0 : 1)
 				if(angle !== null) {
-					this.angularSpeed[i] = angle * dt
-				} else if(Math.abs(this.angularSpeed[i]) < 0.01) {
+					// this.angularSpeed[i] = angle * dt
+					const diff = angle - this.angle[i]
+					const mod = (diff + Math.PI) % (Math.PI * 2) - Math.PI
+					this.angle[i] += mod * dt
+					// this.angularSpeed[i] = mod
+				}
+				if (Math.abs(this.angularSpeed[i]) < 0.01) {
 					this.angularSpeed[i] = randomFloat(-ANGULAR_ACCELERATION / 2, ANGULAR_ACCELERATION / 2)
 				} else if (this.angularSpeed[i]) {
 					this.angularSpeed[i] -= dt * ANGULAR_ACCELERATION * Math.sign(this.angularSpeed[i])
@@ -72,16 +77,20 @@ export default class Ants {
 			this.angularSpeed[i] = Math.sign(this.angularSpeed[i]) * Math.min(Math.abs(this.angularSpeed[i]), ANGULAR_SPEED)
 		}
 		for (let i = 0; i < this.count; i++) {
-			this.angle[i] += this.angularSpeed[i] * dt
-			this.angle[i] %= Math.PI * 2
-		}
-		for (let i = 0; i < this.count; i++) {
 			if (this.hasFood[i] && entities.home.isInside(this.x[i], this.y[i])) {
 				this.hasFood[i] = 0
 				entities.home.collected[0]++
+				this.angularSpeed[i] = 0
+				this.angle[i] += Math.PI
 			} else if (!this.hasFood[i] && entities.food.isInside(this.x[i], this.y[i])) {
 				this.hasFood[i] = 1
+				this.angularSpeed[i] = 0
+				this.angle[i] += Math.PI
 			}
+		}
+		for (let i = 0; i < this.count; i++) {
+			this.angle[i] += this.angularSpeed[i] * dt
+			this.angle[i] %= Math.PI * 2
 		}
 		for (let i = 0; i < this.count; i++) {
 			const lastPheromone = this.lastPheromone[i]
@@ -94,14 +103,16 @@ export default class Ants {
 		this.chunks = []
 		for (let i = 0; i < this.count; i++) {
 			const type = this.hasFood[i] ? 0 : 1
+			const x = Math.floor(this.x[i] / CHUNK_SIZE)
+			const y = Math.floor(this.y[i] / CHUNK_SIZE)
 			if(!this.chunks[type]){
 				this.chunks[type] = []
 			}
-			if(!this.chunks[type][this.x[i]]) {
-				this.chunks[type][this.x[i]] = []
+			if(!this.chunks[type][x]) {
+				this.chunks[type][x] = []
 			}
-			if(!this.chunks[type][this.x[i]][this.y[i]]) {
-				this.chunks[type][this.x[i]][this.y[i]] = true
+			if(!this.chunks[type][x][y]) {
+				this.chunks[type][x][y] = true
 			}
 		}
 	}
@@ -139,8 +150,8 @@ export default class Ants {
 					const evenCeil = (rayIndex + 1) & ~1
 					const multiplier = evenCeil / 2 * (odd * 2 - 1)
 					const rayAngle = angle + multiplier * RAY_ANGLE_INTERVAL
-					const rayX = x + Math.cos(rayAngle) * LINEAR_SPEED * 2
-					const rayY = y + Math.sin(rayAngle) * LINEAR_SPEED * 2
+					const rayX = x + Math.cos(rayAngle) * LINEAR_SPEED
+					const rayY = y + Math.sin(rayAngle) * LINEAR_SPEED
 					context.strokeStyle = rayIndex === 0 
 						? "purple"
 						: odd ? "orange" : "blue"
@@ -199,8 +210,8 @@ function rayCast(x, y, angle, max) {
 		const evenCeil = (rayIndex + 1) & ~1
 		const multiplier = evenCeil / 2 * (odd ? -1 : 1)
 		const rayAngle = angle + multiplier * RAY_ANGLE_INTERVAL
-		const rayX = x + Math.cos(rayAngle) * LINEAR_SPEED * 2
-		const rayY = y + Math.sin(rayAngle) * LINEAR_SPEED * 2
+		const rayX = x + Math.cos(rayAngle) * LINEAR_SPEED
+		const rayY = y + Math.sin(rayAngle) * LINEAR_SPEED
 		if (rayX < max - SIZE && rayX > 0 + SIZE && rayY < max - SIZE && rayY > 0 + SIZE) {
 			return multiplier
 		}
