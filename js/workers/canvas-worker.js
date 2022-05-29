@@ -1,4 +1,5 @@
-import Ants from './Ants.js'
+import Ants from '../classes/Ants.js'
+import Pheromones from '../classes/Pheromones.js'
 
 /**
  * @typedef {Object} TransferableEntitySet
@@ -50,8 +51,8 @@ function listen(port) {
 }
 
 function start() {
-	const ants = new Ants()
-	entities.ants = ants
+	entities.pheromones = new Pheromones()
+	entities.ants = new Ants()
 	loop()
 }
 

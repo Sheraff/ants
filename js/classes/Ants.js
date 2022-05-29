@@ -1,25 +1,14 @@
+import { randomFloat, randomInt } from "../utils/random.js";
+import {
+	makeFloat32SharedArrayBuffer,
+	makeUint8SharedArrayBuffer,
+} from "../utils/sharedArrayBuffer.js"
+
 const LINEAR_SPEED = 70;
 const ANGULAR_SPEED = Math.PI / 2;
 const ANGULAR_ACCELERATION = Math.PI / 4
 const SIZE = 2
 const RAY_CAST_COUNT = 6
-
-function randomInt(min, max) {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function makeTypedSharedArrayBuffer(Type, ratio, array){
-	const length = ratio * array.length;
-	const buffer = new SharedArrayBuffer(length);
-	const view = new Type(buffer);
-	for (let i = 0; i < array.length; i++) {
-		view[i] = array[i];
-	}
-	return [buffer, view];
-}
-
-const makeFloat32SharedArrayBuffer = makeTypedSharedArrayBuffer.bind(null, Float32Array, 4)
-const makeUint8SharedArrayBuffer = makeTypedSharedArrayBuffer.bind(null, Uint8Array, 1)
 
 export default class Ants {
 	/**
@@ -36,12 +25,18 @@ export default class Ants {
 		const y = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => randomInt(0, side)))
 		this.buffers.y = y[0]
 		this.y = y[1]
-		const angle = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => Math.random() * Math.PI * 2))
+		const angle = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => randomFloat(0, Math.PI * 2)))
 		this.buffers.angle = angle[0]
 		this.angle = angle[1]
 		const angularSpeed = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => 0))
 		this.buffers.angularSpeed = angularSpeed[0]
 		this.angularSpeed = angularSpeed[1]
+		const hasFood = makeUint8SharedArrayBuffer(new Array(count).fill().map(() => 0))
+		this.buffers.hasFood = hasFood[0]
+		this.hasFood = hasFood[1]
+		const lastPheromone = makeFloat32SharedArrayBuffer(new Array(count).fill().map(() => 0))
+		this.buffers.lastPheromone = lastPheromone[0]
+		this.lastPheromone = lastPheromone[1]
 		const closest = makeUint8SharedArrayBuffer(new Array(count).fill().map(() => 0))
 		this.buffers.closest = closest[0]
 		this.closest = closest[1]
@@ -49,7 +44,7 @@ export default class Ants {
 	}
 
 	/** @param {number} dt */
-	update(dt) {
+	update(dt, entities) {
 		for (let i = 0; i < this.count; i++) {
 			const dx = LINEAR_SPEED * Math.cos(this.angle[i])
 			const newX = this.x[i] + dx * dt
@@ -76,6 +71,14 @@ export default class Ants {
 		for (let i = 0; i < this.count; i++) {
 			this.angle[i] += this.angularSpeed[i] * dt
 			this.angle[i] %= Math.PI * 2
+		}
+		for (let i = 0; i < this.count; i++) {
+			const lastPheromone = this.lastPheromone[i]
+			this.lastPheromone[i] = lastPheromone + dt
+			if (lastPheromone > 1 + Math.random() * 0.5) {
+				this.lastPheromone[i] = 0
+				entities.pheromones.add(this.x[i], this.y[i])
+			}
 		}
 	}
 
@@ -157,6 +160,8 @@ export default class Ants {
 		this.y = new Float32Array(data.buffers.y)
 		this.angle = new Float32Array(data.buffers.angle)
 		this.angularSpeed = new Float32Array(data.buffers.angularSpeed)
+		this.hasFood = new Uint8Array(data.buffers.hasFood)
+		this.lastPheromone = new Float32Array(data.buffers.lastPheromone)
 		this.closest = new Uint8Array(data.buffers.closest)
 		this.count = data.count
 		this.side = data.side

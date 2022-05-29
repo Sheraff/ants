@@ -1,4 +1,5 @@
-import Ants from './Ants.js'
+import Ants from '../classes/Ants.js'
+import Pheromones from '../classes/Pheromones.js'
 
 /**
  * @typedef {Object} EntitySet
@@ -51,8 +52,9 @@ let port
  * @param {number} side 
  */
 function start(side) {
-	const ants = new Ants(4000, side)
-	entities.ants = ants
+	const count = 500
+	entities.pheromones = new Pheromones(count * 5)
+	entities.ants = new Ants(count, side)
 	if (!paused) {
 		play()
 	}
@@ -69,7 +71,7 @@ function loop() {
 			const dt = (time - lastTime) / 1000
 			lastTime = time
 
-			Object.values(entities).forEach((entity) => entity.update(dt))
+			Object.values(entities).forEach((entity) => entity.update(dt, entities))
 
 			// for (const entity of Object.values(entities)) {
 			// 	const chunks = entity.update(dt)

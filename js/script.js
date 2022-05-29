@@ -3,14 +3,14 @@ const side = Math.min(window.innerHeight, window.innerWidth);
 canvas.height = side * window.devicePixelRatio;
 canvas.width = side * window.devicePixelRatio;
 
-const canvasWorker = new Worker("js/canvas-worker.js", { type: "module" });
+const canvasWorker = new Worker("js/workers/canvas-worker.js", { type: "module" });
 const offscreen = canvas.transferControlToOffscreen();
 canvasWorker.postMessage({
 	side: canvas.width,
 	canvas: offscreen
 }, [offscreen]);
 
-const processWorker = new Worker("js/process-worker.js", { type: "module" });
+const processWorker = new Worker("js/workers/process-worker.js", { type: "module" });
 processWorker.postMessage({
 	side: canvas.width,
 })
