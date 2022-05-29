@@ -28,3 +28,10 @@ canvas.addEventListener('click', ({x, y}) => {
 		}
 	})
 })
+
+document.addEventListener("visibilitychange", (event) => {
+	processWorker.postMessage({
+		type: 'toggle',
+		status: document.visibilityState === 'visible'
+	})
+})

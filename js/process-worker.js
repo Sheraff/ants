@@ -9,8 +9,10 @@ import Ants from './Ants.js'
 
 /** @type {Object<string, EntitySet>} */
 const entities = {}
+let paused = false
+let port
 {
-	let side, port, started
+	let side, started
 	onmessage = async function({data}) {
 		if (data.side) {
 			side = data.side
@@ -20,7 +22,7 @@ const entities = {}
 		}
 		if (!started && side && port) {
 			started = true
-			start(side, port)
+			start(side)
 			port.postMessage(
 				{
 					type: 'buffers',
@@ -28,32 +30,40 @@ const entities = {}
 				}
 			)
 		}
-		if(data.type === 'mouse') {
+		if (data.type === 'mouse') {
 			const {x, y} = data.mouse
 			entities.ants.tagClosest(x, y)
+		}
+		if (data.type === 'toggle') {
+			paused = !data.status
+			if(started) {
+				if (paused) {
+					pause()
+				} else {
+					play()
+				}
+			}
 		}
 	}
 }
 
 /**
  * @param {number} side 
- * @param {MessagePort} port 
  */
-function start(side, port) {
+function start(side) {
 	const ants = new Ants(1500, side)
 	entities.ants = ants
-	loop(entities)
-	metrics(port)
+	if (!paused) {
+		play()
+	}
 }
 
 const fpsArray = []
-/**
- * @param {Object<string, EntitySet>} entities
- */
-function loop(entities) {
+let loopTimeoutId
+function loop() {
 	let lastTime = performance.now()
 	const frame = () => {
-		setTimeout(() => {
+		loopTimeoutId = setTimeout(() => {
 			const time = performance.now()
 			frame()
 			const dt = (time - lastTime) / 1000
@@ -70,14 +80,24 @@ function loop(entities) {
 	frame()
 }
 
-/** @param {MessagePort} port */
-function metrics(port) {
-	setTimeout(() => {
+let metricsTimeoutId
+function metrics() {
+	metricsTimeoutId = setTimeout(() => {
 		const fps = fpsArray.length / fpsArray.reduce((a, b) => a + b)
 		port.postMessage({
 			type: 'fps',
 			fps: Math.round(fps),
 		})
-		metrics(port)
+		metrics()
 	}, 1000)
+}
+
+function pause() {
+	clearTimeout(loopTimeoutId)
+	clearTimeout(metricsTimeoutId)
+}
+
+function play() {
+	loop()
+	metrics()
 }
