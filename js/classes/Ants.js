@@ -58,7 +58,11 @@ export default class Ants {
 		}
 		for (let i = 0; i < this.count; i++) {
 			const angleStrength = rayCast(this.x[i], this.y[i], this.angle[i], this.side)
-			this.angularSpeed[i] += dt * ANGULAR_ACCELERATION * angleStrength
+			if(angleStrength === null) {
+				this.angularSpeed[i] = randomInt(0, 1) ? ANGULAR_ACCELERATION : -ANGULAR_ACCELERATION
+			} else {
+				this.angularSpeed[i] += dt * ANGULAR_ACCELERATION * angleStrength
+			}
 			if (angleStrength === 0) {
 				const angle = entities.pheromones.perceive(this.x[i], this.y[i], this.hasFood[i] ? 0 : 1)
 				if(angle !== null) {
@@ -216,4 +220,5 @@ function rayCast(x, y, angle, max) {
 			return multiplier
 		}
 	}
+	return null
 }
