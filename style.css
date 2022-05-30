@@ -9,6 +9,9 @@ html, body {
 }
 
 canvas {
+	position: fixed;
+	top: 0;
+	left: 0;
 	width: 100vmin;
 	height: 100vmin;
 }

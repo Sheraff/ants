@@ -27,11 +27,15 @@ export default class Landmark {
 
 	update() {}
 
-	draw(context) {
-		context.fillStyle = types[this.type].color
-		context.beginPath()
-		context.arc(this.x, this.y, HOME_RADIUS, 0, Math.PI * 2)
-		context.fill()
+	drawn = false
+	draw({ui}) {
+		if (!this.drawn) {
+			ui.fillStyle = types[this.type].color
+			ui.beginPath()
+			ui.arc(this.x, this.y, HOME_RADIUS, 0, Math.PI * 2)
+			ui.fill()
+			this.drawn = true
+		}
 	}
 
 	isInside(x, y) {

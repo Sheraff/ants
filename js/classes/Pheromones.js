@@ -4,6 +4,7 @@ import {
 	makeInt16SharedArrayBuffer,
 	makeFloat32SharedArrayBuffer,
 	makeUint8SharedArrayBuffer,
+	makeUint16SharedArrayBuffer,
 } from "../utils/sharedArrayBuffer.js"
 
 const types = {
@@ -37,6 +38,12 @@ export default class Pheromones {
 		const type = makeUint8SharedArrayBuffer(new Array(count).fill())
 		this.buffers.type = type[0]
 		this.type = type[1]
+		const undrawn = makeUint16SharedArrayBuffer(new Array(count).fill())
+		this.buffers.undrawn = undrawn[0]
+		this.undrawn = undrawn[1]
+		const undrawnIndex = makeUint8SharedArrayBuffer(new Array(1).fill(0))
+		this.buffers.undrawnIndex = undrawnIndex[0]
+		this.undrawnIndex = undrawnIndex[1]
 	}
 
 	add(x, y, type, angle) {
@@ -47,13 +54,11 @@ export default class Pheromones {
 			this.angle[i] = angle
 			this.lifetime[i] = PHEROMONE_DURATION
 			this.type[i] = type
+			this.undrawn[this.undrawnIndex[0]] = i
+			this.undrawnIndex[0]++
 		} else {
 			console.log('no more pheromones')
 		}
-	}
-
-	log(){
-		console.log(this.chunks)
 	}
 
 	update(dt, entities) {
@@ -137,26 +142,45 @@ export default class Pheromones {
 		return cell
 	}
 
-	draw(context) {
-		const multiplier = 255 / PHEROMONE_DURATION
-		for (let i = 0; i < this.count; i++) {
-			if(this.lifetime[i]) {
-				const shade = Math.round(this.lifetime[i] * multiplier)
-				context.fillStyle = types[this.type[i]].color(shade)
-				context.beginPath()
-				context.rect(this.x[i], this.y[i], 1, 1)
-				context.fill()
+	cumul = 0
+	staticUi = false
+	draw({fade, ui}, dt) {
+		if(!this.staticUi) {
+			this.staticUi = true
+			for (let i = CHUNK_SIZE; i < this.side; i += CHUNK_SIZE) {
+				ui.strokeStyle = '#222'
+				ui.beginPath()
+				ui.moveTo(i, 0)
+				ui.lineTo(i, this.side)
+				ui.moveTo(0, i)
+				ui.lineTo(this.side, i)
+				ui.stroke()
 			}
 		}
-		for (let i = CHUNK_SIZE; i < this.side; i += CHUNK_SIZE) {
-			context.strokeStyle = '#222'
-			context.beginPath()
-			context.moveTo(i, 0)
-			context.lineTo(i, this.side)
-			context.moveTo(0, i)
-			context.lineTo(this.side, i)
-			context.stroke()
+
+		this.cumul += dt
+		if (this.cumul > 0.1) {
+			const int = Math.floor(this.cumul / 0.1)
+			this.cumul -= int * 0.1
+			fade.globalCompositeOperation = 'darken'
+			fade.fillStyle = `rgba(0, 0, 0, ${0.25 / PHEROMONE_DURATION})`
+			fade.beginPath()
+			fade.rect(0, 0, this.side, this.side)
+			for (let i = 0; i < int; i++) {
+				fade.fill()
+			}
+			fade.globalCompositeOperation = 'source-over'
 		}
+		for (let j = 0; j < this.undrawnIndex[0]; j++) {
+			const i = this.undrawn[j]
+			if (this.lifetime[i]) {
+				fade.fillStyle = types[this.type[i]].color(255)
+				fade.beginPath()
+				fade.rect(this.x[i], this.y[i], 1, 1)
+				fade.fill()
+			}
+		}
+		this.undrawnIndex[0] = 0
 	}
 
 	toData() {
@@ -174,6 +198,8 @@ export default class Pheromones {
 		this.angle = new Float32Array(data.buffers.angle)
 		this.lifetime = new Float32Array(data.buffers.lifetime)
 		this.type = new Uint8Array(data.buffers.type)
+		this.undrawn = new Uint16Array(data.buffers.undrawn)
+		this.undrawnIndex = new Uint8Array(data.buffers.undrawnIndex)
 		this.count = data.count
 		this.side = data.side
 	}

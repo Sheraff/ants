@@ -36,7 +36,6 @@ let port
 		if (data.type === 'mouse') {
 			const {x, y} = data.mouse
 			entities.ants.tagClosest(x, y)
-			entities.pheromones.log()
 		}
 		if (data.type === 'toggle') {
 			paused = !data.status
@@ -55,7 +54,7 @@ let port
  * @param {number} side 
  */
 function start(side) {
-	const count = 500
+	const count = 300
 	entities.home = new Landmark(0, side/4, side/4)
 	entities.food = new Landmark(1, 3*side/4, 3*side/4)
 	entities.pheromones = new Pheromones(Math.ceil(count * ((PHEROMONE_DURATION + 1) / PHEROMONE_PERIOD)), side)
@@ -77,17 +76,6 @@ function loop() {
 			lastTime = time
 
 			Object.values(entities).forEach((entity) => entity.update(dt, entities))
-
-			// for (const entity of Object.values(entities)) {
-			// 	const chunks = entity.update(dt)
-			// 	let chunk
-			// 	do {
-			// 		if (performance.now() - time > 1000 / 60) {
-			// 			await new Promise(resolve => setTimeout(resolve, 0))
-			// 		}
-			// 		chunk = chunks.next()
-			// 	} while(!chunk.done)
-			// }
 
 			fpsArray.push(dt)
 			if(fpsArray.length > 100) {

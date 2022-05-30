@@ -141,10 +141,10 @@ export default class Ants {
 		return closestIndex
 	}
 
-	/** @param {CanvasRenderingContext2D} context */
-	draw(context) {
-		context.fillStyle = "limegreen"
-		context.strokeStyle = "limegreen"
+	/** @param {Object<string, CanvasRenderingContext2D>} */
+	draw({main}) {
+		main.fillStyle = "limegreen"
+		main.strokeStyle = "limegreen"
 		for (let i = 0; i < this.count; i++) {
 			const x = Math.round(this.x[i])
 			const y = Math.round(this.y[i])
@@ -159,31 +159,31 @@ export default class Ants {
 					const rayAngle = angle + multiplier * RAY_ANGLE_INTERVAL
 					const rayX = x + Math.cos(rayAngle) * LINEAR_SPEED
 					const rayY = y + Math.sin(rayAngle) * LINEAR_SPEED
-					context.strokeStyle = rayIndex === 0 
+					main.strokeStyle = rayIndex === 0 
 						? "purple"
 						: odd ? "orange" : "blue"
-					context.beginPath()
-					context.moveTo(x, y)
-					context.lineTo(rayX, rayY)
-					context.stroke()
+					main.beginPath()
+					main.moveTo(x, y)
+					main.lineTo(rayX, rayY)
+					main.stroke()
 				}
 			}
 
 			// body
-			context.fillStyle = closest ? "red" : "white"
-			context.beginPath()
-			context.rect(Math.floor(x - SIZE / 2), Math.floor(y - SIZE / 2), SIZE, SIZE)
-			context.fill()
+			main.fillStyle = closest ? "red" : "white"
+			main.beginPath()
+			main.rect(Math.floor(x - SIZE / 2), Math.floor(y - SIZE / 2), SIZE, SIZE)
+			main.fill()
 
 			// front
 			if(closest) {
 				const rayX = x + Math.cos(angle) * LINEAR_SPEED / 2
 				const rayY = y + Math.sin(angle) * LINEAR_SPEED / 2
-				context.strokeStyle = "red"
-				context.beginPath()
-				context.moveTo(x, y)
-				context.lineTo(rayX, rayY)
-				context.stroke()
+				main.strokeStyle = "red"
+				main.beginPath()
+				main.moveTo(x, y)
+				main.lineTo(rayX, rayY)
+				main.stroke()
 			}
 		}
 	}

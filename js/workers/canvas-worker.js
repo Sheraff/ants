@@ -10,18 +10,24 @@ import Pheromones from '../classes/Pheromones.js'
 /**
  * @typedef {Object} EntitySet
  * @property {(dx: number) => void} update
- * @property {(context: CanvasRenderingContext2D) => void} draw
+ * @property {(main: CanvasRenderingContext2D) => void} draw
  */
 
 /** @type {Object<string, EntitySet>} */
 const entities = {}
-let context, side
+let main, fade, ui, side
 
 {
 	let port, started
 	onmessage = async function({data}) {
-		if (data.canvas) {
-			context = data.canvas.getContext("2d", { alpha: false })
+		if (data.fade) {
+			fade = data.fade.getContext("2d", {alpha: false})
+		}
+		if (data.ui) {
+			ui = data.ui.getContext("2d")
+		}
+		if (data.main) {
+			main = data.main.getContext("2d")
 		}
 		if (data.side) {
 			side = data.side
@@ -30,7 +36,7 @@ let context, side
 			port = data.port
 			listen(port)
 		}
-		if (!started && context && side && port) {
+		if (!started && main && fade && ui && side && port) {
 			started = true
 			start()
 		}
@@ -64,20 +70,28 @@ function loop() {
 	let lastTime = 0
 	let lastMetricsPrint = lastTime
 	let drawFps = 0
+
+	ui.strokeStyle = "darkgray"
+	ui.rect(0, 0, side, side)
+	ui.stroke()
+
 	const frame = () => {
 		requestAnimationFrame((time) => {
+			if (!lastTime) {
+				lastTime = time
+				return frame()
+			}
+			// timing
+			const dt = (time - lastTime) / 1000
+			lastTime = time
+
 			// draw
-			context.clearRect(0, 0, side, side)
-			context.strokeStyle = "darkgray"
-			context.rect(0, 0, side, side)
-			context.stroke()
+			main.clearRect(0, 0, side, side)
 			Object.values(entities).forEach((entity) => {
-				entity.draw(context)
+				entity.draw({main, fade, ui}, dt)
 			})
 
 			// metrics
-			const dt = (time - lastTime) / 1000
-			lastTime = time
 			fpsArray.push(dt)
 			if(time - lastMetricsPrint > 100) {
 				lastMetricsPrint = time
@@ -86,9 +100,9 @@ function loop() {
 					fpsArray = fpsArray.slice(Math.max(0, fpsArray.length - 100))
 				}
 			}
-			context.fillStyle = 'white'
-			context.font = '25px monospace'
-			context.fillText(`proc.: ${processFps} fps - draw: ${drawFps} fps - food: ${entities.home.collected[0]}`, 10, 50)
+			main.fillStyle = 'white'
+			main.font = '25px monospace'
+			main.fillText(`proc.: ${processFps} fps - draw: ${drawFps} fps - food: ${entities.home.collected[0]}`, 10, 50)
 
 			// next
 			frame()
