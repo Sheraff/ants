@@ -8,10 +8,10 @@ import {
 
 const types = {
 	0: {
-		color: (shade) => `rgb(0, ${shade}, ${shade})`
+		color: (shade) => `rgb(0, ${shade}, 0)`
 	},
 	1: {
-		color: (shade) => `rgb(${shade}, 0, ${shade})`
+		color: (shade) => `rgb(${shade}, 0, 0)`
 	}
 }
 

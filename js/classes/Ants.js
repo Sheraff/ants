@@ -9,7 +9,7 @@ const LINEAR_SPEED = 70;
 const ANGULAR_SPEED = Math.PI;
 const ANGULAR_ACCELERATION = Math.PI
 const SIZE = 2
-const RAY_CAST_COUNT = 6
+const RAY_CAST_COUNT = 10
 
 export default class Ants {
 	/**
@@ -57,30 +57,6 @@ export default class Ants {
 			this.y[i] = Math.min(Math.max(newY, 0 + SIZE), this.side - SIZE)
 		}
 		for (let i = 0; i < this.count; i++) {
-			const angleStrength = rayCast(this.x[i], this.y[i], this.angle[i], this.side)
-			if(angleStrength === null) {
-				this.angularSpeed[i] = randomInt(0, 1) ? ANGULAR_ACCELERATION : -ANGULAR_ACCELERATION
-			} else {
-				this.angularSpeed[i] += dt * ANGULAR_ACCELERATION * angleStrength
-			}
-			if (angleStrength === 0) {
-				const angle = entities.pheromones.perceive(this.x[i], this.y[i], this.hasFood[i] ? 0 : 1)
-				if(angle !== null) {
-					// this.angularSpeed[i] = angle * dt
-					const diff = angle - this.angle[i]
-					const mod = (diff + Math.PI) % (Math.PI * 2) - Math.PI
-					this.angle[i] += mod * dt
-					// this.angularSpeed[i] = mod
-				}
-				if (Math.abs(this.angularSpeed[i]) < 0.01) {
-					this.angularSpeed[i] = randomFloat(-ANGULAR_ACCELERATION / 2, ANGULAR_ACCELERATION / 2)
-				} else if (this.angularSpeed[i]) {
-					this.angularSpeed[i] -= dt * ANGULAR_ACCELERATION * Math.sign(this.angularSpeed[i])
-				}
-			}
-			this.angularSpeed[i] = Math.sign(this.angularSpeed[i]) * Math.min(Math.abs(this.angularSpeed[i]), ANGULAR_SPEED)
-		}
-		for (let i = 0; i < this.count; i++) {
 			if (this.hasFood[i] && entities.home.isInside(this.x[i], this.y[i])) {
 				this.hasFood[i] = 0
 				entities.home.collected[0]++
@@ -92,16 +68,43 @@ export default class Ants {
 				this.angle[i] += Math.PI
 			}
 		}
+		const rayCastForFood = new Set(['free', 'food'])
+		const rayCastForHome = new Set(['free', 'home'])
+		for (let i = 0; i < this.count; i++) {
+			const {free, home, food} = rayCast(this.x[i], this.y[i], this.angle[i], this.side, entities, this.hasFood[i] ? rayCastForHome : rayCastForFood)
+			let angularSpeed = this.angularSpeed[i]
+			if (free === null) {
+				angularSpeed = randomInt(0, 1) ? ANGULAR_ACCELERATION : -ANGULAR_ACCELERATION
+			} else if (food !== null || home !== null) {
+				angularSpeed = (food || home) * RAY_ANGLE_INTERVAL
+			} else if (free === 0) {
+				const angle = entities.pheromones.perceive(this.x[i], this.y[i], this.hasFood[i] ? 0 : 1)
+				if(angle !== null) {
+					const diff = angle - this.angle[i]
+					const mod = (diff + Math.PI) % (Math.PI * 2) - Math.PI
+					this.angle[i] += mod * Math.min(0.9, dt * 8)
+				}
+				if (Math.abs(angularSpeed) < 0.05) {
+					angularSpeed = randomFloat(-ANGULAR_ACCELERATION * 0.2, ANGULAR_ACCELERATION * 0.2)
+				} else {
+					angularSpeed -= dt * ANGULAR_ACCELERATION * Math.sign(angularSpeed)
+				}
+			} else {
+				angularSpeed += dt * ANGULAR_ACCELERATION * free
+			}
+			this.angularSpeed[i] = Math.sign(angularSpeed) * Math.min(Math.abs(angularSpeed), ANGULAR_SPEED)
+		}
 		for (let i = 0; i < this.count; i++) {
 			this.angle[i] += this.angularSpeed[i] * dt
 			this.angle[i] %= Math.PI * 2
 		}
 		for (let i = 0; i < this.count; i++) {
-			const lastPheromone = this.lastPheromone[i]
-			this.lastPheromone[i] = lastPheromone + dt
+			const lastPheromone = this.lastPheromone[i] + dt
 			if (lastPheromone > PHEROMONE_PERIOD + Math.random() * PHEROMONE_PERIOD * 0.5) {
 				this.lastPheromone[i] = 0
 				entities.pheromones.add(this.x[i], this.y[i], this.hasFood[i], this.angle[i])
+			} else {
+				this.lastPheromone[i] = lastPheromone
 			}
 		}
 		this.chunks = []
@@ -208,17 +211,42 @@ export default class Ants {
 }
 
 const RAY_ANGLE_INTERVAL = Math.PI / (RAY_CAST_COUNT + 1)
-function rayCast(x, y, angle, max) {
-	for (let rayIndex = 0; rayIndex <= RAY_CAST_COUNT; rayIndex++) {
+function rayCast(x, y, angle, max, entities, searchFor = new Set(['free'])) {
+	const results = {
+		free: null,
+		home: null,
+		food: null,
+	}
+	let remainingToFind = searchFor.size
+	for (let rayIndex = 0; rayIndex <= RAY_CAST_COUNT && remainingToFind > 0; rayIndex++) {
 		const odd = rayIndex & 1
 		const evenCeil = (rayIndex + 1) & ~1
 		const multiplier = evenCeil / 2 * (odd ? -1 : 1)
 		const rayAngle = angle + multiplier * RAY_ANGLE_INTERVAL
 		const rayX = x + Math.cos(rayAngle) * LINEAR_SPEED
 		const rayY = y + Math.sin(rayAngle) * LINEAR_SPEED
-		if (rayX < max - SIZE && rayX > 0 + SIZE && rayY < max - SIZE && rayY > 0 + SIZE) {
-			return multiplier
+		let free, home, food
+		if (results.free === null && searchFor.has('free')) {
+			if (rayX < max - SIZE && rayX > 0 + SIZE && rayY < max - SIZE && rayY > 0 + SIZE) {
+				results.free = multiplier
+				free = true
+				remainingToFind--
+			}
+		}
+		if (!free && results.home === null && searchFor.has('home')) {
+			if (entities.home.isInside(rayX, rayY)) {
+				results.home = multiplier
+				home = true
+				remainingToFind--
+			}
+		}
+		if (!free && !home && results.food === null && searchFor.has('food')) {
+			if (entities.food.isInside(rayX, rayY)) {
+				results.food = multiplier
+				food = true
+				remainingToFind--
+			}
 		}
 	}
-	return null
+	return results
 }
