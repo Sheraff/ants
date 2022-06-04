@@ -34,8 +34,12 @@ let port
 			)
 		}
 		if (data.type === 'mouse') {
-			const {x, y} = data.mouse
-			entities.ants.tagClosest(x, y)
+			if(data.mouse) {
+				const {x, y} = data.mouse
+				entities.ants.tagClosest(x, y)
+			} else {
+				entities.ants.clearClosest()
+			}
 		}
 		if (data.type === 'toggle') {
 			paused = !data.status

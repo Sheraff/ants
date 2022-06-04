@@ -128,12 +128,12 @@ export default class Pheromones {
 		let maxWeight = 0
 		for (let i = x - 1; i <= x + 1; i++) {
 			for (let j = y - 1; j <= y + 1; j++) {
-				if (i === j) {
+				if (i===0 && j===0) {
 					continue
 				}
 				const cell = this.chunks[type][i]?.[j]
 				if (cell) {
-					const weight = cell.reduce((sum, i) => this.lifetime[i] + sum) / cell.length
+					const weight = cell.reduce((sum, i) => this.lifetime[i]**2 + sum) / cell.length
 					if (weight > maxWeight) {
 						maxWeight = weight
 						angle = Math.atan2(j - y, i - x)

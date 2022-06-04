@@ -45,6 +45,15 @@ mainCanvas.addEventListener('click', ({x, y}) => {
 		}
 	})
 })
+window.addEventListener('keydown', (event) => {
+	if(event.key === 'Escape') {
+		event.preventDefault()
+		processWorker.postMessage({
+			type: 'mouse',
+			mouse: null
+		})
+	}
+})
 
 let playing = true
 document.addEventListener("visibilitychange", () => {

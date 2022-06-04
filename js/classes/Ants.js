@@ -93,7 +93,7 @@ export default class Ants {
 						if(this.closest[i]) {
 							console.log('obstacle', free)
 						}
-						angularSpeed += RAY_ANGLE_INTERVAL * free
+						angularSpeed = RAY_ANGLE_INTERVAL * free
 					}
 					touched = true
 				}
@@ -102,7 +102,7 @@ export default class Ants {
 					if(angle !== null) {
 						const diff = angle - this.angle[i]
 						const mod = (diff + Math.PI) % (Math.PI * 2) - Math.PI
-						angularSpeed += mod
+						angularSpeed = mod
 						touched = true
 						if(this.closest[i]) {
 							console.log('pheromone', angle / Math.PI, mod / Math.PI)
@@ -160,11 +160,15 @@ export default class Ants {
 				closestIndex = i
 			}
 		}
+		this.clearClosest()
+		this.closest[closestIndex] = 1
+		return closestIndex
+	}
+
+	clearClosest() {
 		for (let i = 0; i < this.count; i++) {
 			this.closest[i] = 0
 		}
-		this.closest[closestIndex] = 1
-		return closestIndex
 	}
 
 	/** @param {Object<string, CanvasRenderingContext2D>} */
