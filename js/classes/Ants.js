@@ -9,7 +9,7 @@ const LINEAR_SPEED = 70;
 const ANGULAR_SPEED = Math.PI;
 const ANGULAR_ACCELERATION = Math.PI
 const SIZE = 2
-const RAY_CAST_COUNT = 10
+const RAY_CAST_COUNT = 8
 
 export default class Ants {
 	/**
@@ -75,20 +75,45 @@ export default class Ants {
 			let angularSpeed = this.angularSpeed[i]
 			angularSpeed -= dt * angularSpeed
 			if (free === null) {
-				angularSpeed += randomInt(0, 1) ? ANGULAR_ACCELERATION : -ANGULAR_ACCELERATION
+				if (Math.abs(angularSpeed) < Math.PI / 2) {
+					if(this.closest[i]) {
+						console.log('escape')
+					}
+					angularSpeed += randomInt(0, 1) ? Math.PI : -Math.PI
+				}
 			} else if (food !== null || home !== null) {
+				if(this.closest[i]) {
+					console.log('goal', food||home)
+				}
 				angularSpeed = (food || home) * RAY_ANGLE_INTERVAL
 			} else {
-				const angle = entities.pheromones.perceive(this.x[i], this.y[i], this.hasFood[i] ? 0 : 1)
-				if(angle !== null) {
-					const diff = angle - this.angle[i]
-					const mod = (diff + Math.PI) % (Math.PI * 2) - Math.PI
-					angularSpeed += mod * dt
-				} else if (free !== 0) {
-					angularSpeed += dt * RAY_ANGLE_INTERVAL * free
+				let touched = false
+				if (free !== -1 && free !== 1) {
+					if(Math.abs(angularSpeed) < Math.abs(RAY_ANGLE_INTERVAL * free) || Math.sign(angularSpeed) !== Math.sign(free)) {
+						if(this.closest[i]) {
+							console.log('obstacle', free)
+						}
+						angularSpeed += RAY_ANGLE_INTERVAL * free
+					}
+					touched = true
 				}
-				else if (Math.abs(angularSpeed) < 0.03) {
-					angularSpeed += randomFloat(-ANGULAR_ACCELERATION * 0.2, ANGULAR_ACCELERATION * 0.2)
+				if(!touched) {
+					const angle = entities.pheromones.perceive(this.x[i], this.y[i], this.hasFood[i] ? 0 : 1)
+					if(angle !== null) {
+						const diff = angle - this.angle[i]
+						const mod = (diff + Math.PI) % (Math.PI * 2) - Math.PI
+						angularSpeed += mod
+						touched = true
+						if(this.closest[i]) {
+							console.log('pheromone', angle / Math.PI, mod / Math.PI)
+						}
+					}
+				}
+				if (!touched && Math.abs(angularSpeed) < 0.03) {
+					if(this.closest[i]) {
+						console.log('random')
+					}
+					angularSpeed = randomFloat(-ANGULAR_ACCELERATION * 0.2, ANGULAR_ACCELERATION * 0.2)
 				}
 			}
 			this.angularSpeed[i] = normalizeAngle(angularSpeed)
@@ -143,7 +168,7 @@ export default class Ants {
 	}
 
 	/** @param {Object<string, CanvasRenderingContext2D>} */
-	draw({main}) {
+	draw({main}, dt) {
 		main.fillStyle = "limegreen"
 		main.strokeStyle = "limegreen"
 		for (let i = 0; i < this.count; i++) {
@@ -246,7 +271,7 @@ function rayCast(x, y, angle, max, entities, searchFor = new Set(['free'])) {
 		food: null,
 	}
 	if(searchFor.has('free')) {
-		for (let rayIndex = 0; rayIndex <= RAY_CAST_COUNT; rayIndex++) {
+		for (let rayIndex = 1; rayIndex <= RAY_CAST_COUNT; rayIndex++) {
 			const [rayX, rayY, multiplier] = ray(x, y, angle, rayIndex)
 			if (rayX < max - SIZE && rayX > 0 + SIZE && rayY < max - SIZE && rayY > 0 + SIZE) {
 				results.free = multiplier

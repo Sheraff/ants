@@ -15,8 +15,8 @@ import Pheromones from '../classes/Pheromones.js'
 
 /** @type {Object<string, EntitySet>} */
 const entities = {}
+let paused = false
 let main, fade, ui, side
-
 {
 	let port, started
 	onmessage = async function({data}) {
@@ -40,6 +40,16 @@ let main, fade, ui, side
 			started = true
 			start()
 		}
+		if (data.type === 'toggle') {
+			paused = !data.status
+			if(started) {
+				if (paused) {
+					pause()
+				} else {
+					play()
+				}
+			}
+		}
 	}
 }
 
@@ -62,21 +72,22 @@ function start() {
 	entities.food = new Landmark(1)
 	entities.pheromones = new Pheromones()
 	entities.ants = new Ants()
-	loop()
-}
-
-let fpsArray = []
-function loop() {
-	let lastTime = 0
-	let lastMetricsPrint = lastTime
-	let drawFps = 0
 
 	ui.strokeStyle = "darkgray"
 	ui.rect(0, 0, side, side)
 	ui.stroke()
 
+	play()
+}
+
+let fpsArray = []
+let rafId
+function loop() {
+	let lastTime = 0
+	let lastMetricsPrint = lastTime
+	let drawFps = 0
 	const frame = () => {
-		requestAnimationFrame((time) => {
+		rafId = requestAnimationFrame((time) => {
 			if (!lastTime) {
 				lastTime = time
 				return frame()
@@ -102,11 +113,19 @@ function loop() {
 			}
 			main.fillStyle = 'white'
 			main.font = '25px monospace'
-			main.fillText(`proc.: ${processFps} fps - draw: ${drawFps} fps - food: ${entities.home.collected[0]}`, 10, 50)
+			main.fillText(`step: ${processFps}fps - draw: ${drawFps}fps - food: ${entities.home.collected[0]}`, 10, 50)
 
 			// next
 			frame()
 		})
 	}
 	frame()
+}
+
+function pause() {
+	cancelAnimationFrame(rafId)
+}
+
+function play() {
+	loop()
 }

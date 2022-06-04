@@ -46,9 +46,26 @@ mainCanvas.addEventListener('click', ({x, y}) => {
 	})
 })
 
-document.addEventListener("visibilitychange", (event) => {
-	processWorker.postMessage({
+let playing = true
+document.addEventListener("visibilitychange", () => {
+	playing = document.visibilityState === 'visible'
+	const message = {
 		type: 'toggle',
-		status: document.visibilityState === 'visible'
-	})
+		status: playing
+	}
+	processWorker.postMessage(message)
+	canvasWorker.postMessage(message)
+})
+
+window.addEventListener('keydown', (event) => {
+	if(event.key === ' ') {
+		event.preventDefault()
+		playing = !playing
+		const message = {
+			type: 'toggle',
+			status: playing
+		}
+		processWorker.postMessage(message)
+		canvasWorker.postMessage(message)
+	}
 })

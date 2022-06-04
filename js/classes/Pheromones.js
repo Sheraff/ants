@@ -89,42 +89,30 @@ export default class Pheromones {
 				if(!this.chunks[type]) {
 					this.chunks[type] = []
 				}
-				if(!entities.ants.chunks[type][x]) {
+				if(!entities.ants.chunks[type][x] && !entities.ants.chunks[type][x+1] && !entities.ants.chunks[type][x-1]) {
 					continue
 				}
 				if (!this.chunks[type][x]) {
 					this.chunks[type][x] = []
 				}
-				if(!entities.ants.chunks[type][x][y]) {
+				if(
+					!entities.ants.chunks[type][x]?.[y+1]
+					&& !entities.ants.chunks[type][x]?.[y-1]
+					&& !entities.ants.chunks[type][x+1]?.[y]
+					&& !entities.ants.chunks[type][x-1]?.[y]
+					&& !entities.ants.chunks[type][x+1]?.[y+1]
+					&& !entities.ants.chunks[type][x+1]?.[y-1]
+					&& !entities.ants.chunks[type][x-1]?.[y+1]
+					&& !entities.ants.chunks[type][x-1]?.[y-1]
+				) {
 					continue
 				}
 				if (!this.chunks[type][x][y]) {
 					this.chunks[type][x][y] = []
 				}
-				this.chunks[type][x][y].push(this.angle[i])
+				this.chunks[type][x][y].push(i)
 			}
 		}
-
-		// for (let type = 0; type < this.chunks.length; type++) {
-		// 	const typeGrid = this.chunks[type]
-		// 	if (!typeGrid) {
-		// 		continue
-		// 	}
-		// 	for (let x = 0; x < typeGrid.length; x++) {
-		// 		const xVector = typeGrid[x]
-		// 		if (!xVector) {
-		// 			continue
-		// 		}
-		// 		for (let y = 0; y < xVector.length; y++) {
-		// 			const angles = xVector[y]
-		// 			if (!angles) {
-		// 				continue
-		// 			}
-		// 			const median = circularMedian(angles)
-		// 			xVector[y] = (median + Math.PI) % (Math.PI * 2)
-		// 		}
-		// 	}
-		// }
 	}
 
 	perceive(_x, _y, type) {
@@ -133,31 +121,25 @@ export default class Pheromones {
 		}
 		const x = Math.floor(_x / CHUNK_SIZE)
 		const y = Math.floor(_y / CHUNK_SIZE)
-		if (this.perceiveMemo[type]?.[x]?.[y]) {
+		if (this.perceiveMemo[type]?.[x]?.[y] !== undefined) {
 			return this.perceiveMemo[type][x][y]
 		}
-		const angles = []
+		let angle = null
+		let maxWeight = 0
 		for (let i = x - 1; i <= x + 1; i++) {
 			for (let j = y - 1; j <= y + 1; j++) {
+				if (i === j) {
+					continue
+				}
 				const cell = this.chunks[type][i]?.[j]
-				if (cell && cell !== Infinity) {
-					angles.push(...cell)
+				if (cell) {
+					const weight = cell.reduce((sum, i) => this.lifetime[i] + sum) / cell.length
+					if (weight > maxWeight) {
+						maxWeight = weight
+						angle = Math.atan2(j - y, i - x)
+					}
 				}
 			}
-		}
-
-		// skip median if possible
-		let result
-		if (!angles.length) {
-			result = null
-		} else if (angles.length === 1) {
-			result = angles[0]
-		} else {
-			const median = circularMedian(angles)
-			if (median === Infinity)
-				result = null
-			else
-				result = median + Math.PI
 		}
 
 		// memo
@@ -167,9 +149,9 @@ export default class Pheromones {
 		if(!this.perceiveMemo[type][x]) {
 			this.perceiveMemo[type][x] = []
 		}
-		this.perceiveMemo[type][x][y] = result
+		this.perceiveMemo[type][x][y] = angle
 
-		return result
+		return angle
 	}
 
 	cumul = 0
