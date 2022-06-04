@@ -105,52 +105,46 @@ export default class Pheromones {
 			}
 		}
 
-		for (let type = 0; type < this.chunks.length; type++) {
-			const typeGrid = this.chunks[type]
-			if (!typeGrid) {
-				continue
-			}
-			for (let x = 0; x < typeGrid.length; x++) {
-				const xVector = typeGrid[x]
-				if (!xVector) {
-					continue
-				}
-				for (let y = 0; y < xVector.length; y++) {
-					const angles = xVector[y]
-					if (!angles) {
-						continue
-					}
-					const median = circularMedian(angles)
-					xVector[y] = (median + Math.PI) % (Math.PI * 2)
-				}
-			}
-		}
+		// for (let type = 0; type < this.chunks.length; type++) {
+		// 	const typeGrid = this.chunks[type]
+		// 	if (!typeGrid) {
+		// 		continue
+		// 	}
+		// 	for (let x = 0; x < typeGrid.length; x++) {
+		// 		const xVector = typeGrid[x]
+		// 		if (!xVector) {
+		// 			continue
+		// 		}
+		// 		for (let y = 0; y < xVector.length; y++) {
+		// 			const angles = xVector[y]
+		// 			if (!angles) {
+		// 				continue
+		// 			}
+		// 			const median = circularMedian(angles)
+		// 			xVector[y] = (median + Math.PI) % (Math.PI * 2)
+		// 		}
+		// 	}
+		// }
 	}
 
 	perceive(_x, _y, type) {
 		if (!this.chunks[type]) {
 			return null
 		}
-		const x1 = Math.floor(_x / CHUNK_SIZE)
-		const x2 = _x - x1 * CHUNK_SIZE < CHUNK_SIZE / 2 ? x1 - 1 : x1 + 1
-		const y1 = Math.floor(_y / CHUNK_SIZE)
-		const y2 = _y - y1 * CHUNK_SIZE < CHUNK_SIZE / 2 ? y1 - 1 : y1 + 1
-		if (this.perceiveMemo[type]?.[x1]?.[x2]?.[y1]?.[y2]) {
-			return this.perceiveMemo[type][x1][x2][y1][y2]
+		const x = Math.floor(_x / CHUNK_SIZE)
+		const y = Math.floor(_y / CHUNK_SIZE)
+		if (this.perceiveMemo[type]?.[x]?.[y]) {
+			return this.perceiveMemo[type][x][y]
 		}
-		const cells = [
-			[x1, y1],
-			[x1, y2],
-			[x2, y1],
-			[x2, y2]
-		]
-		const angles = cells.reduce((list, [x, y]) => {
-			const cell = this.chunks[type][x]?.[y]
-			if (cell && cell !== Infinity) {
-				list.push(cell)
+		const angles = []
+		for (let i = x - 1; i <= x + 1; i++) {
+			for (let j = y - 1; j <= y + 1; j++) {
+				const cell = this.chunks[type][i]?.[j]
+				if (cell && cell !== Infinity) {
+					angles.push(...cell)
+				}
 			}
-			return list
-		}, [])
+		}
 
 		// skip median if possible
 		let result
@@ -159,23 +153,21 @@ export default class Pheromones {
 		} else if (angles.length === 1) {
 			result = angles[0]
 		} else {
-			result = circularMedian(angles)
+			const median = circularMedian(angles)
+			if (median === Infinity)
+				result = null
+			else
+				result = median + Math.PI
 		}
 
 		// memo
 		if(!this.perceiveMemo[type]) {
 			this.perceiveMemo[type] = []
 		}
-		if(!this.perceiveMemo[type][x1]) {
-			this.perceiveMemo[type][x1] = []
+		if(!this.perceiveMemo[type][x]) {
+			this.perceiveMemo[type][x] = []
 		}
-		if(!this.perceiveMemo[type][x1][x2]) {
-			this.perceiveMemo[type][x1][x2] = []
-		}
-		if(!this.perceiveMemo[type][x1][x2][y1]) {
-			this.perceiveMemo[type][x1][x2][y1] = []
-		}
-		this.perceiveMemo[type][x1][x2][y1][y2] = result
+		this.perceiveMemo[type][x][y] = result
 
 		return result
 	}
@@ -214,7 +206,7 @@ export default class Pheromones {
 			if (this.lifetime[i]) {
 				fade.fillStyle = types[this.type[i]].color(255)
 				fade.beginPath()
-				fade.rect(this.x[i], this.y[i], 1, 1)
+				fade.rect(this.x[i], this.y[i], 2, 2)
 				fade.fill()
 			}
 		}

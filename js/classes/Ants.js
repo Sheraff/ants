@@ -1,4 +1,4 @@
-import { CHUNK_SIZE, HOME_RADIUS, PHEROMONE_PERIOD } from "../utils/constants.js";
+import { CHUNK_SIZE, GOAL_WEIGHT, HOME_RADIUS, OBSTACLE_WEIGHT, PHEROMONE_PERIOD, PHEROMONE_WEIGHT } from "../utils/constants.js";
 import { randomFloat, randomInt } from "../utils/random.js";
 import {
 	makeFloat32SharedArrayBuffer,
@@ -73,6 +73,7 @@ export default class Ants {
 		for (let i = 0; i < this.count; i++) {
 			const {free, home, food} = rayCast(this.x[i], this.y[i], this.angle[i], this.side, entities, this.hasFood[i] ? rayCastForHome : rayCastForFood)
 			let angularSpeed = this.angularSpeed[i]
+			angularSpeed -= dt * angularSpeed
 			if (free === null) {
 				angularSpeed += randomInt(0, 1) ? ANGULAR_ACCELERATION : -ANGULAR_ACCELERATION
 			} else if (food !== null || home !== null) {
@@ -84,15 +85,13 @@ export default class Ants {
 					const mod = (diff + Math.PI) % (Math.PI * 2) - Math.PI
 					angularSpeed += mod * dt
 				} else if (free !== 0) {
-					angularSpeed += dt * ANGULAR_ACCELERATION * free
+					angularSpeed += dt * RAY_ANGLE_INTERVAL * free
 				}
 				else if (Math.abs(angularSpeed) < 0.03) {
 					angularSpeed += randomFloat(-ANGULAR_ACCELERATION * 0.2, ANGULAR_ACCELERATION * 0.2)
-				} else {
-					angularSpeed -= dt * ANGULAR_ACCELERATION * Math.sign(angularSpeed)
 				}
 			}
-			this.angularSpeed[i] = Math.sign(angularSpeed) * Math.min(Math.abs(angularSpeed), ANGULAR_SPEED)
+			this.angularSpeed[i] = normalizeAngle(angularSpeed)
 		}
 		for (let i = 0; i < this.count; i++) {
 			this.angle[i] += this.angularSpeed[i] * dt
@@ -100,11 +99,13 @@ export default class Ants {
 		}
 		for (let i = 0; i < this.count; i++) {
 			const lastPheromone = this.lastPheromone[i] + dt
-			if (lastPheromone > PHEROMONE_PERIOD + Math.random() * PHEROMONE_PERIOD * 0.5) {
-				this.lastPheromone[i] = 0
-				entities.pheromones.add(this.x[i], this.y[i], this.hasFood[i], this.angle[i])
-			} else {
-				this.lastPheromone[i] = lastPheromone
+			if(this.x[i] > CHUNK_SIZE && this.x[i] < this.side - CHUNK_SIZE && this.y[i] > CHUNK_SIZE && this.y[i] < this.side - CHUNK_SIZE) {
+				if (lastPheromone > PHEROMONE_PERIOD + Math.random() * PHEROMONE_PERIOD * 0.5) {
+					this.lastPheromone[i] = 0
+					entities.pheromones.add(this.x[i], this.y[i], this.hasFood[i], this.angle[i])
+				} else {
+					this.lastPheromone[i] = lastPheromone
+				}
 			}
 		}
 		this.chunks = []
@@ -168,17 +169,16 @@ export default class Ants {
 			}
 			// chunks
 			if(closest) {
-				const x1 = Math.floor(x / CHUNK_SIZE)
-				const x2 = x - x1 * CHUNK_SIZE < CHUNK_SIZE / 2 ? x1 - 1 : x1 + 1
-				const y1 = Math.floor(y / CHUNK_SIZE)
-				const y2 = y - y1 * CHUNK_SIZE < CHUNK_SIZE / 2 ? y1 - 1 : y1 + 1
-				for (let x of [x1, x2]) {
-					for (let y of [y1, y2]) {
+				const x = Math.floor(this.x[i] / CHUNK_SIZE)
+				const y = Math.floor(this.y[i] / CHUNK_SIZE)
+				for (let i = x - 1; i <= x + 1; i++) {
+					for (let j = y - 1; j <= y + 1; j++) {
 						main.strokeStyle = "red"
-						main.strokeRect(x * CHUNK_SIZE, y * CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE)
+						main.strokeRect(i * CHUNK_SIZE, j * CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE)
 					}
 				}
 			}
+
 			// angularSpeed
 			if(closest) {
 				const angularSpeed = angle + this.angularSpeed[i]
@@ -189,21 +189,29 @@ export default class Ants {
 				main.stroke()
 			}
 
-			// body
-			main.fillStyle = closest ? "red" : "white"
-			main.beginPath()
-			main.rect(Math.floor(x - SIZE / 2), Math.floor(y - SIZE / 2), SIZE, SIZE)
-			main.fill()
-
 			// front
 			if(closest) {
 				const rayX = x + Math.cos(angle) * LINEAR_SPEED / 2
 				const rayY = y + Math.sin(angle) * LINEAR_SPEED / 2
-				main.strokeStyle = "red"
+				main.strokeStyle = "white"
 				main.beginPath()
 				main.moveTo(x, y)
 				main.lineTo(rayX, rayY)
 				main.stroke()
+			}
+
+			// body
+			if(closest) {
+				main.fillStyle = this.hasFood[i] ? "limegreen" : "purple"
+				const size = 10
+				main.beginPath()
+				main.rect(Math.floor(x - size / 2), Math.floor(y - size / 2), size, size)
+				main.fill()
+			} else {
+				main.fillStyle = "white"
+				main.beginPath()
+				main.rect(Math.floor(x - SIZE / 2), Math.floor(y - SIZE / 2), SIZE, SIZE)
+				main.fill()
 			}
 		}
 	}
@@ -237,36 +245,53 @@ function rayCast(x, y, angle, max, entities, searchFor = new Set(['free'])) {
 		home: null,
 		food: null,
 	}
-	let remainingToFind = searchFor.size
-	for (let rayIndex = 0; rayIndex <= RAY_CAST_COUNT && remainingToFind > 0; rayIndex++) {
-		const odd = rayIndex & 1
-		const evenCeil = (rayIndex + 1) & ~1
-		const multiplier = evenCeil / 2 * (odd ? -1 : 1)
-		const rayAngle = angle + multiplier * RAY_ANGLE_INTERVAL
-		const rayX = x + Math.cos(rayAngle) * LINEAR_SPEED
-		const rayY = y + Math.sin(rayAngle) * LINEAR_SPEED
-		let free, home, food
-		if (results.free === null && searchFor.has('free')) {
+	if(searchFor.has('free')) {
+		for (let rayIndex = 0; rayIndex <= RAY_CAST_COUNT; rayIndex++) {
+			const [rayX, rayY, multiplier] = ray(x, y, angle, rayIndex)
 			if (rayX < max - SIZE && rayX > 0 + SIZE && rayY < max - SIZE && rayY > 0 + SIZE) {
 				results.free = multiplier
-				free = true
-				remainingToFind--
+				break
 			}
 		}
-		if (!free && results.home === null && searchFor.has('home')) {
+	}
+	if(searchFor.has('home')) {
+		for (let rayIndex = RAY_CAST_COUNT; rayIndex >= 0; rayIndex--) {
+			const [rayX, rayY, multiplier] = ray(x, y, angle, rayIndex)
 			if (entities.home.isInside(rayX, rayY)) {
 				results.home = multiplier
-				home = true
-				remainingToFind--
+				break
 			}
 		}
-		if (!free && !home && results.food === null && searchFor.has('food')) {
+	}
+	if (searchFor.has('food')) {
+		for (let rayIndex = RAY_CAST_COUNT; rayIndex >= 0; rayIndex--) {
+			const [rayX, rayY, multiplier] = ray(x, y, angle, rayIndex)
 			if (entities.food.isInside(rayX, rayY)) {
 				results.food = multiplier
-				food = true
-				remainingToFind--
+				break
 			}
 		}
 	}
 	return results
+}
+
+function ray(x, y, angle, i) {
+	const odd = i & 1
+	const evenCeil = (i + 1) & ~1
+	const multiplier = evenCeil / 2 * (odd ? -1 : 1)
+	const rayAngle = angle + multiplier * RAY_ANGLE_INTERVAL
+	const rayX = x + Math.cos(rayAngle) * LINEAR_SPEED
+	const rayY = y + Math.sin(rayAngle) * LINEAR_SPEED
+	return [rayX, rayY, multiplier]
+}
+
+// function that takes an angle and returns the angle between -PI and PI
+function normalizeAngle(angle) {
+	while (angle < -Math.PI) {
+		angle += 2 * Math.PI
+	}
+	while (angle > Math.PI) {
+		angle -= 2 * Math.PI
+	}
+	return angle
 }
