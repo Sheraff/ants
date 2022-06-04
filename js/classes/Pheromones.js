@@ -20,6 +20,7 @@ export default class Pheromones {
 	constructor(count = 0, side = 0) {
 		this.pool = new Array(count).fill().map((_, i) => i)
 		this.chunks = []
+		this.perceiveMemo = []
 		this.count = count
 		this.side = side
 		this.buffers = {}
@@ -76,6 +77,7 @@ export default class Pheromones {
 
 		// chunking
 		this.chunks = []
+		this.perceiveMemo = []
 		for (let i = 0; i < this.count; i++) {
 			if (this.lifetime[i] > 0) {
 				const type = this.type[i]
@@ -126,20 +128,56 @@ export default class Pheromones {
 	}
 
 	perceive(_x, _y, type) {
-		const x = Math.floor(_x / CHUNK_SIZE)
-		const y = Math.floor(_y / CHUNK_SIZE)
-		if(!this.chunks[type]) {
+		if (!this.chunks[type]) {
 			return null
 		}
-		const xVector = this.chunks[type][x]
-		if (!xVector) {
-			return null
+		const x1 = Math.floor(_x / CHUNK_SIZE)
+		const x2 = _x - x1 * CHUNK_SIZE < CHUNK_SIZE / 2 ? x1 - 1 : x1 + 1
+		const y1 = Math.floor(_y / CHUNK_SIZE)
+		const y2 = _y - y1 * CHUNK_SIZE < CHUNK_SIZE / 2 ? y1 - 1 : y1 + 1
+		if (this.perceiveMemo[type]?.[x1]?.[x2]?.[y1]?.[y2]) {
+			return this.perceiveMemo[type][x1][x2][y1][y2]
 		}
-		const cell = xVector[y]
-		if (!cell || cell === Infinity) {
-			return null
+		const cells = [
+			[x1, y1],
+			[x1, y2],
+			[x2, y1],
+			[x2, y2]
+		]
+		const angles = cells.reduce((list, [x, y]) => {
+			const cell = this.chunks[type][x]?.[y]
+			if (cell && cell !== Infinity) {
+				list.push(cell)
+			}
+			return list
+		}, [])
+
+		// skip median if possible
+		let result
+		if (!angles.length) {
+			result = null
+		} else if (angles.length === 1) {
+			result = angles[0]
+		} else {
+			result = circularMedian(angles)
 		}
-		return cell
+
+		// memo
+		if(!this.perceiveMemo[type]) {
+			this.perceiveMemo[type] = []
+		}
+		if(!this.perceiveMemo[type][x1]) {
+			this.perceiveMemo[type][x1] = []
+		}
+		if(!this.perceiveMemo[type][x1][x2]) {
+			this.perceiveMemo[type][x1][x2] = []
+		}
+		if(!this.perceiveMemo[type][x1][x2][y1]) {
+			this.perceiveMemo[type][x1][x2][y1] = []
+		}
+		this.perceiveMemo[type][x1][x2][y1][y2] = result
+
+		return result
 	}
 
 	cumul = 0

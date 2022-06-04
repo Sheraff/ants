@@ -74,23 +74,23 @@ export default class Ants {
 			const {free, home, food} = rayCast(this.x[i], this.y[i], this.angle[i], this.side, entities, this.hasFood[i] ? rayCastForHome : rayCastForFood)
 			let angularSpeed = this.angularSpeed[i]
 			if (free === null) {
-				angularSpeed = randomInt(0, 1) ? ANGULAR_ACCELERATION : -ANGULAR_ACCELERATION
+				angularSpeed += randomInt(0, 1) ? ANGULAR_ACCELERATION : -ANGULAR_ACCELERATION
 			} else if (food !== null || home !== null) {
 				angularSpeed = (food || home) * RAY_ANGLE_INTERVAL
-			} else if (free === 0) {
+			} else {
 				const angle = entities.pheromones.perceive(this.x[i], this.y[i], this.hasFood[i] ? 0 : 1)
 				if(angle !== null) {
 					const diff = angle - this.angle[i]
 					const mod = (diff + Math.PI) % (Math.PI * 2) - Math.PI
-					this.angle[i] += mod * Math.min(0.9, dt * 8)
+					angularSpeed += mod * dt
+				} else if (free !== 0) {
+					angularSpeed += dt * ANGULAR_ACCELERATION * free
 				}
-				if (Math.abs(angularSpeed) < 0.05) {
-					angularSpeed = randomFloat(-ANGULAR_ACCELERATION * 0.2, ANGULAR_ACCELERATION * 0.2)
+				else if (Math.abs(angularSpeed) < 0.03) {
+					angularSpeed += randomFloat(-ANGULAR_ACCELERATION * 0.2, ANGULAR_ACCELERATION * 0.2)
 				} else {
 					angularSpeed -= dt * ANGULAR_ACCELERATION * Math.sign(angularSpeed)
 				}
-			} else {
-				angularSpeed += dt * ANGULAR_ACCELERATION * free
 			}
 			this.angularSpeed[i] = Math.sign(angularSpeed) * Math.min(Math.abs(angularSpeed), ANGULAR_SPEED)
 		}
@@ -159,14 +159,34 @@ export default class Ants {
 					const rayAngle = angle + multiplier * RAY_ANGLE_INTERVAL
 					const rayX = x + Math.cos(rayAngle) * LINEAR_SPEED
 					const rayY = y + Math.sin(rayAngle) * LINEAR_SPEED
-					main.strokeStyle = rayIndex === 0 
-						? "purple"
-						: odd ? "orange" : "blue"
+					main.strokeStyle = "orange"
 					main.beginPath()
 					main.moveTo(x, y)
 					main.lineTo(rayX, rayY)
 					main.stroke()
 				}
+			}
+			// chunks
+			if(closest) {
+				const x1 = Math.floor(x / CHUNK_SIZE)
+				const x2 = x - x1 * CHUNK_SIZE < CHUNK_SIZE / 2 ? x1 - 1 : x1 + 1
+				const y1 = Math.floor(y / CHUNK_SIZE)
+				const y2 = y - y1 * CHUNK_SIZE < CHUNK_SIZE / 2 ? y1 - 1 : y1 + 1
+				for (let x of [x1, x2]) {
+					for (let y of [y1, y2]) {
+						main.strokeStyle = "red"
+						main.strokeRect(x * CHUNK_SIZE, y * CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE)
+					}
+				}
+			}
+			// angularSpeed
+			if(closest) {
+				const angularSpeed = angle + this.angularSpeed[i]
+				main.strokeStyle = "red"
+				main.beginPath()
+				main.moveTo(x, y)
+				main.lineTo(x + Math.cos(angularSpeed) * LINEAR_SPEED, y + Math.sin(angularSpeed) * LINEAR_SPEED)
+				main.stroke()
 			}
 
 			// body

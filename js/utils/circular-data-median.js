@@ -29,15 +29,17 @@ export default function circularMedian(x) {
 
 	// Checks for ties
 	const cm = posmed.filter((x, i) => difsin[i] === 0 || Math.abs(difsin[i]) > numties[i])
-	return averageAngle(cm)
+	return cm.length
+		? averageAngle(cm)
+		: Infinity
 }
 
 /**
- * @param {Array<number>} x
+ * @param {Array<number>} array
  */
 function averageAngle(array) {
-	const y = array.reduce((sum, current) => sum + Math.sin(current), 0)
-	const x = array.reduce((sum, current) => sum + Math.cos(current), 0)
+	const y = array.reduce((sum, current) => sum + Math.sin(current))
+	const x = array.reduce((sum, current) => sum + Math.cos(current))
 	return x === 0 && y === 0
 		? Infinity
 		: Math.atan2(y, x)
