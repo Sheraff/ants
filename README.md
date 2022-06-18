@@ -12,4 +12,3 @@ Cool tech:
 
 Next:
 - Rust to boost perf?
-- Actual "ants" sim
